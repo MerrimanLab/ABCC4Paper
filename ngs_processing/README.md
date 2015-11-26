@@ -1,4 +1,4 @@
-## Processing of NGS data from wustl for the resequencing experiment.
+## Processing of the NGS data from wustl for the resequencing experiment.
 
 Sequencing data was provided in SAM format, this first step was to convert all
 the SAMs back into fastq files. 
@@ -7,12 +7,11 @@ http://gatkforums.broadinstitute.org/discussion/2908/howto-revert-a-bam-file-to-
 
 ## Software Requirements
 
-- GATK (v3.3)
-- samtools (v1.1-2)
-- bcftools (v1.1-6)
-- bwa (v0.7.12-r1039)
-- Picard tools (v1.41) 
-
+- GATK (v3.3) (https://www.broadinstitute.org/gatk/download/)
+- samtools (v1.1-2) (http://www.htslib.org/)
+- bcftools (v1.1-6) (https://samtools.github.io/bcftools/bcftools.html)
+- bwa (v0.7.12-r1039) (http://bio-bwa.sourceforge.net/)
+- Picard tools (v1.41) (http://broadinstitute.github.io/picard/) 
 
 ## Resources 
 
@@ -20,7 +19,13 @@ Broad institute bundle contains reference genome and auxilary files used in the 
 
 Best practices - https://www.broadinstitute.org/gatk/guide/best-practices 
 
-- ftp://ftp.broadinstitute.org/bundle/2.8/b37/
+Bundle data - ftp://ftp.broadinstitute.org/bundle/2.8/b37/
+
+- ```resources/hapmap.vcf``` (HapMap genotypes and sites VCFs)
+- ```resources/omni.vcf``` (OMNI 2.5 genotypes for 1kg samples)
+- ```resources/mills.vcf``` (Mills gold standard set of indels)
+- ```resources/dbsnp.vcf``` (dbsnp v138.vcf)
+- ```resources/1000G_phase1.indels.b37.vcf``` (phase 1 indels for the 1000 genomes)
 
 ## Pipeline
 
@@ -31,6 +36,7 @@ Need to set the following variables to your environment.
 ```bash
     export PICARD=<path to picard.jar>
     export GATK=<path to GATK.jar>
+    export REFERENCE=references/human_g1k_v37_decoy.fasta
 ```
 
 ### BAM2Fq
@@ -49,20 +55,76 @@ Shuffles bam and then turns them back into a fastq file.
     parallel "gzip {}" ::: *.fq
 ```
 
-###  alignment
-
-Now we follow the GATK best-practices
+### Alignment
 
 All alignments go into the bwa\_mem folder.
 
+Align
 ```bash
      mkdir -p bwa_mem
      ./scripts/alignments.sh *.fq
+```
+Sort
+```bash
+    ./scripts/sort_sam.sh  bwa_mem/*sam
+```
+MarkDuplicates
+```bash
+    parallel "./scripts/mark_duplicates.sh" ::: bwa_mem/*bam
+```
+Places BAM files with duplicates marked in the ```rmdup``` directory. 
+
+### Indel Realignment  
+
+https://www.broadinstitute.org/gatk/guide/article?id=2800
+
+First step generate realignment intervals.
+```
+    parallel  "java -Xmx16g -jar ${GATK} -T  RealignerTargetCreator -R ${REFERENCE} -I {} -o {/.}.intervals --known references/1000G_phase1.indels.b37.vcf --known references/mills.vcf -L references/resequencing_regions.bed " ::: rmdup/*bam
+```
+Perform the realignment.
+```
+    parallel  "java -Xmx16g -jar ${GATK} -T  IndelRealigner -R ${REFERENCE} -I {} --targetIntervals {/.}.intervals -o realign/{/.}.realigned_indels.bam -known references/mills.vcf --known references/1000G_phase1.indels.b37.vcf -L references/resequencing_regions.bed" ::: rmdup/*bam 
+```
+
+### Base recalibration.
+
+https://www.broadinstitute.org/gatk/guide/article?id=2801
+
+Analyse covariation
+```
+    mkdir -p recal
+    cd recal
+    parallel  "java -Xmx32g -jar ${GATK} -T BaseRecalibrator -R ${REFERENCE} -I {}  -o {/.}.table  -log {/.}.base_recal.log -L references/resequencing_regions.bed" ::: ../realign/*.bam
+```
+
+Second pass
+
+```
+    parallel  "java jar ${GATK} -T BaseRecalibrator -R ${REFERENCE} -I {} -L  -o {/.}.post.table -BQSR {/.}.table --knownSites references/dbsnp.vcf -knownSites references/mills.vcf -knownSites references/1000G_phase1.indels.b37.vcf -log {/.}.second_base_recal.log -L references/resequencing_regions.bed" ::: ../realign/*.bam 
+```
+
+Plot generation
+
+```
+parallel  "java -Xmx32g -jar ${GATK} -T AnalyzeCovariates -R ${REFERENCE}  -plots {/.}.pdf -before {/.}.table -after {/.}.post.table -log {/.}.plots " :::  ../realign/*.bam
+```
+
+Print reads    
+
+```
+parallel  "java -Djava.io.tmpdir=/Volumes/BiochemXsan/scratch/merrimanlab/james/resequencing/bams/tmp -Xmx32g -jar ../GenomeAnalysisTK.jar -T PrintReads -R ${REFERENCE} -I {}  -BQSR {/.}.table -o {/.}.recal_reads.bam" ::: ../realign/*.bam 
 ```
 
 
 
 
+### VQSR (Variant Quality Score Recalibration)
+
+Running this analysis outputs two VCF files.
+
+- ```filtered_indels.vcf``` - filtered indels.
+- ```recalibrated_snps_raw.vcf``` - recalibrated SNPs.
 
 
 
