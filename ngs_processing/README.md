@@ -135,7 +135,8 @@ Create Genotype GVCFs
 ```
 mkdir -p gvcfs
 parallel  "java -Xmx32g -jar ${GATK} -T HaplotypeCaller -R ${REFERENCE}  --dbsnp references/dbsnp.vcf -I {} -o gvcfs/{/.}.gvcf \
-              --emitRefConfidence GVCF --variant_index_type LINEAR --variant_index_parameter 128000 -L references/resequencing_regions.bed" ::: recal/*.recal_reads.bam
+              --emitRefConfidence GVCF --variant_index_type LINEAR --variant_index_parameter 128000 \ 
+           -L references/resequencing_regions.bed" ::: recal/*.recal_reads.bam
 ```
 
 Run the HaplotypeCaller
