@@ -21,11 +21,12 @@ Best practices - https://www.broadinstitute.org/gatk/guide/best-practices
 
 Bundle data - ftp://ftp.broadinstitute.org/bundle/2.8/b37/
 
-- ```resources/hapmap.vcf``` (HapMap genotypes and sites VCFs)
-- ```resources/omni.vcf``` (OMNI 2.5 genotypes for 1kg samples)
-- ```resources/mills.vcf``` (Mills gold standard set of indels)
-- ```resources/dbsnp.vcf``` (dbsnp v138.vcf)
-- ```resources/1000G_phase1.indels.b37.vcf``` (phase 1 indels for the 1000 genomes)
+- ```references/hapmap.vcf``` (HapMap genotypes and sites VCFs)
+- ```references/omni.vcf``` (OMNI 2.5 genotypes for 1kg samples)
+- ```references/mills.vcf``` (Mills gold standard set of indels)
+- ```references/dbsnp.vcf``` (dbsnp v138.vcf)
+- ```references/1000G_phase1.indels.b37.vcf``` (phase 1 indels for the 1000 genomes)
+- ```references/human_g1k_v37_decoy.fasta``` GRCh37 decoy reference genome.
 
 ## Pipeline
 
@@ -73,6 +74,16 @@ MarkDuplicates
     parallel "./scripts/mark_duplicates.sh" ::: bwa_mem/*bam
 ```
 Places BAM files with duplicates marked in the ```rmdup``` directory. 
+
+### Picard Metrics
+
+Generate a number of metrics using picardmetrics. 
+
+```
+mkdir -p metrics
+cd metrics
+parallel "picardmetrics run -o picard_metrics {}" ::: ../bwa_mem/*bam
+```
 
 ### Indel Realignment  
 
@@ -128,6 +139,8 @@ cd ..
 
 ### HaplotypeCaller 
 
+https://www.broadinstitute.org/gatk/guide/article?id=3893
+
 This analysis was actually performed on the NeSI cluster using (but I have added illustrative commands below)
 
 Create Genotype GVCFs 
@@ -142,12 +155,13 @@ parallel  "java -Xmx32g -jar ${GATK} -T HaplotypeCaller -R ${REFERENCE}  --dbsnp
 Run the HaplotypeCaller
 
 ```
-    java -Xmx32g -jar ${GATK} -T GenotypeGVCFs  -R ${REFERENCE}  --dbsnp references/dbsnp.vcf --max_alternate_alleles 20   \
-`for gvcf in *.gvcf
-do
-    echo "--variant ${gvcf}"
-done` \
--o raw.vcf -L -L references/resequencing_regions.bed --includeNonVariantSites
+    java -Xmx32g -jar ${GATK} -T GenotypeGVCFs  -R ${REFERENCE}  --dbsnp references/dbsnp.vcf \ 
+    --max_alternate_alleles 20   \
+    `for gvcf in *.gvcf
+    do
+        echo "--variant ${gvcf}"
+    done` \
+    -o raw.vcf -L -L references/resequencing_regions.bed 
 ```
 
 ### Variant Filtering
