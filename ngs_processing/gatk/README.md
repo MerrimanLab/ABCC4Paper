@@ -192,5 +192,5 @@ Use bcftools to replace the headers in the variant files, because they were nons
 Running this analysis outputs two final VCF files, for further processing.
 
 - ```filtered_indels.vcf``` - filtered indels. (not used in any further analyses)
-- ```recalibrated_snps_raw.vcf``` - recalibrated SNPs.
+- ```vqsr_snp_names.vcf``` - recalibrated SNPs.
 
