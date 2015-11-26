@@ -13,4 +13,3 @@ Tanner C, Boocock J, Cadzow M, Phipps-Green AJ, Harrè Hindmarsh J, Stamp LK, Da
     - ```vcfs/``` - associations and annotation of VCF files
     - ```taqman/``` - analysis genotyped SNPs
     
- 
