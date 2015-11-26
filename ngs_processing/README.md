@@ -1,9 +1,9 @@
 # Processing of the NGS data for the resequencing experiment.
 
-Order files were processed in.
+Order folders were processed. 
 
-- gatk
-- SNP quality control
+1. gatk
+2. quality_control/ 
 
 
 

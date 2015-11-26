@@ -12,6 +12,7 @@ http://gatkforums.broadinstitute.org/discussion/2908/howto-revert-a-bam-file-to-
 - bcftools (v1.1-6) (https://samtools.github.io/bcftools/bcftools.html)
 - bwa (v0.7.12-r1039) (http://bio-bwa.sourceforge.net/)
 - Picard tools (v1.41) (http://broadinstitute.github.io/picard/) 
+- GNU parallel (v20150822) (http://www.gnu.org/software/parallel/)
 
 ## Resources 
 
