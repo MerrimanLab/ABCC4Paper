@@ -60,6 +60,8 @@ Extract samples from vcf file.
     bcftools view -S samples_remaining all_samples.vcf.gz > remove_bad_samples.vcf
 ```
 
+For this dataset, 3 samples G6174,G5913,AT0721 were removed as a result of this step.
+
 ### Perform Site Level QC
 
 #### Generate input file for SHINY application
