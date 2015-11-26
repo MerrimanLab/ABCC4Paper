@@ -34,7 +34,7 @@ PLINK/seq project
 
 ```
 
-snpqc prep_indiv_qc -i ../gatk/vqsr_snp_names.vcf -o indiv.txt 
+snpqc prep_indivqc -p  phenotypes/phenotype_pseq.txt -o phenotypes/phenotypes.txt -c HYPER -r ~/rm_G6174_G5913_AT0721/hg19 ../gatk/vqsr_snp_names.vcf 
 
 ```
 
@@ -70,6 +70,8 @@ For this dataset, 3 samples G6174,G5913,AT0721 were removed as a result of this 
     snpqc prep_site_qc -i remove_bad_samples.vcf -p phenotypes/phenotype_pseq.txt -c HYPER  -f "geno=DP:ge:10" -o site_qc.txt 
 
 ```
+
+
 ```geno=DP:ge:10``` means than any variant with depth less than 10 or genotype quality less than 10 will be set to missing for analyses. 
 
 This is just a mask from PLINK/Seq, see (https://atgu.mgh.harvard.edu/plinkseq/masks.shtml) for more information.
