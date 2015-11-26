@@ -80,11 +80,15 @@ https://www.broadinstitute.org/gatk/guide/article?id=2800
 
 First step generate realignment intervals.
 ```
-    parallel  "java -Xmx16g -jar ${GATK} -T  RealignerTargetCreator -R ${REFERENCE} -I {} -o {/.}.intervals --known references/1000G_phase1.indels.b37.vcf --known references/mills.vcf -L references/resequencing_regions.bed " ::: rmdup/*bam
+    parallel  "java -Xmx16g -jar ${GATK} -T  RealignerTargetCreator -R ${REFERENCE} -I {} -o {/.}.intervals \
+               --known references/1000G_phase1.indels.b37.vcf --known references/mills.vcf \
+               -L references/resequencing_regions.bed " ::: rmdup/*bam
 ```
 Perform the realignment.
 ```
-    parallel  "java -Xmx16g -jar ${GATK} -T  IndelRealigner -R ${REFERENCE} -I {} --targetIntervals {/.}.intervals -o realign/{/.}.realigned_indels.bam -known references/mills.vcf --known references/1000G_phase1.indels.b37.vcf -L references/resequencing_regions.bed" ::: rmdup/*bam 
+    parallel  "java -Xmx16g -jar ${GATK} -T  IndelRealigner -R ${REFERENCE} -I {} --targetIntervals {/.}.intervals \ 
+               -o realign/{/.}.realigned_indels.bam -known references/mills.vcf --known references/1000G_phase1.indels.b37.vcf \ 
+                -L references/resequencing_regions.bed" ::: rmdup/*bam 
 ```
 
 ### Base recalibration.
@@ -95,37 +99,69 @@ Analyse covariation
 ```
     mkdir -p recal
     cd recal
-    parallel  "java -Xmx32g -jar ${GATK} -T BaseRecalibrator -R ${REFERENCE} -I {}  -o {/.}.table  -log {/.}.base_recal.log -L references/resequencing_regions.bed" ::: ../realign/*.bam
+    parallel  "java -Xmx32g -jar ${GATK} -T BaseRecalibrator -R ${REFERENCE} -I {}  -o {/.}.table  -log {/.}.base_recal.log \ 
+               -L references/resequencing_regions.bed" ::: ../realign/*.bam
 ```
 
 Second pass
 
 ```
-    parallel  "java jar ${GATK} -T BaseRecalibrator -R ${REFERENCE} -I {} -L  -o {/.}.post.table -BQSR {/.}.table --knownSites references/dbsnp.vcf -knownSites references/mills.vcf -knownSites references/1000G_phase1.indels.b37.vcf -log {/.}.second_base_recal.log -L references/resequencing_regions.bed" ::: ../realign/*.bam 
+    parallel  "java jar ${GATK} -T BaseRecalibrator -R ${REFERENCE} -I {} -L  -o {/.}.post.table -BQSR {/.}.table \ 
+                --knownSites references/dbsnp.vcf -knownSites references/mills.vcf -knownSites references/1000G_phase1.indels.b37.vcf \
+                -log {/.}.second_base_recal.log -L references/resequencing_regions.bed" ::: ../realign/*.bam 
 ```
 
 Plot generation
 
 ```
-parallel  "java -Xmx32g -jar ${GATK} -T AnalyzeCovariates -R ${REFERENCE}  -plots {/.}.pdf -before {/.}.table -after {/.}.post.table -log {/.}.plots " :::  ../realign/*.bam
+parallel  "java -Xmx32g -jar ${GATK} -T AnalyzeCovariates -R ${REFERENCE}  -plots {/.}.pdf \ 
+           -before {/.}.table -after {/.}.post.table -log {/.}.plots " :::  ../realign/*.bam
 ```
 
 Print reads    
 
 ```
-parallel  "java -Djava.io.tmpdir=/Volumes/BiochemXsan/scratch/merrimanlab/james/resequencing/bams/tmp -Xmx32g -jar ../GenomeAnalysisTK.jar -T PrintReads -R ${REFERENCE} -I {}  -BQSR {/.}.table -o {/.}.recal_reads.bam" ::: ../realign/*.bam 
+parallel  "java -Xmx32g -jar ${GATK} -T PrintReads -R ${REFERENCE} -I {}  \
+           -BQSR {/.}.table -o {/.}.recal_reads.bam" ::: ../realign/*.bam
+cd .. 
 ```
 
+### HaplotypeCaller 
 
+This analysis was actually performed on the NeSI cluster using (but I have added illustrative commands below)
 
+Create Genotype GVCFs 
 
-### VQSR (Variant Quality Score Recalibration)
+```
+mkdir -p gvcfs
+parallel  "java -Xmx32g -jar ${GATK} -T HaplotypeCaller -R ${REFERENCE}  --dbsnp references/dbsnp.vcf -I {} -o gvcfs/{/.}.gvcf \
+              --emitRefConfidence GVCF --variant_index_type LINEAR --variant_index_parameter 128000 -L references/resequencing_regions.bed" ::: recal/*.recal_reads.bam
+```
+
+Run the HaplotypeCaller
+
+```
+    java -Xmx32g -jar ${GATK} -T GenotypeGVCFs  -R ${REFERENCE}  --dbsnp references/dbsnp.vcf --max_alternate_alleles 20   \
+`for gvcf in *.gvcf
+do
+    echo "--variant ${gvcf}"
+done` \
+-o raw.vcf -L -L references/resequencing_regions.bed --includeNonVariantSites
+```
+
+### Variant Filtering
+
+- VQSR (https://www.broadinstitute.org/gatk/guide/article?id=2805)
+- Hard filters (https://www.broadinstitute.org/gatk/guide/article?id=2806)
 
 Running this analysis outputs two VCF files.
 
+```
+    ./scripts/vqsr.sh raw.vcf 
+```
+
 - ```filtered_indels.vcf``` - filtered indels.
 - ```recalibrated_snps_raw.vcf``` - recalibrated SNPs.
-
 
 
 
