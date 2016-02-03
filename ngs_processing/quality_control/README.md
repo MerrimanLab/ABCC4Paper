@@ -101,13 +101,3 @@ Create final VCF file.
     snpqc postqc -s sites.txt  -v out.vcf -p plink -o out 
 ```
 
-#### Extract ABCCC4/SLC22A6-8 genes from VCF.
-
-Extract only the regions from the gene of interest.
-
-```
-    bgzip out.vcf
-    tabix -p out.vcf
-    bcftools -S beds/genes.bed
-```
- 
