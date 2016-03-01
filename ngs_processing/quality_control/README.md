@@ -19,22 +19,20 @@ It is also worth noting that these steps can be done on a desktop computer.
 - plink (v1.07) (http://pngu.mgh.harvard.edu/~purcell/plink/)
 - tabix and bgzip (v1.2.1) (http://www.htslib.org/doc/tabix.html)
 
-### Convert SNPmax phenotypes to pseq format. 
-
-Takes tab-delimited output similar to that from SNPmax and writes it out in a format for adding to a
-PLINK/seq project
-
-```
-    snpmax_to_pseq -i phenotypes/phenotypes.txt -o phenotypes/phenotype_pseq.txt
-```
 
 ### Perform individual Level QC
+
+## Upfront filtering based on MAC and biallelic SNPs.
+
+```
+    cat ../gatk/vqsr_snp_names.vcf | bcftools filter -e "MAC == 0" | bcftools view -m2 -M2 | filter.vcf
+```
 
 ####Generate input file for SHINY app
 
 ```
 
-snpqc prep_indivqc -p  phenotypes/phenotype_pseq.txt -o phenotypes/phenotypes.txt -c HYPER -r ~/rm_G6174_G5913_AT0721/hg19 ../gatk/vqsr_snp_names.vcf 
+snpqc prep_indivqc -p  phenotypes/phenotype_pseq.txt -o phenotypes/phenotypes.txt -c HYPER -r ~/rm_G6174_G5913_AT0721/hg19 filter.vcf
 
 ```
 
