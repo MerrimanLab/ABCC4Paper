@@ -22,7 +22,7 @@ It is also worth noting that these steps can be done on a desktop computer.
 
 ### Perform individual Level QC
 
-## Upfront filtering based on MAC and biallelic SNPs.
+#### Upfront filtering based on MAC and biallelic SNPs.
 
 ```
     cat ../gatk/vqsr_snp_names.vcf | bcftools filter -e "MAC == 0" | bcftools view -m2 -M2 | filter.vcf
